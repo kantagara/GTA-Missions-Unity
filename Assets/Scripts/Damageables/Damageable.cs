@@ -1,12 +1,7 @@
-﻿using RoboRyanTron.SearchableEnum;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class Damageable : MonoBehaviour
 {
-    [field: SerializeField]
-    [field: SearchableEnum]
-    public DamageableId Id { get; private set; }
-
     [SerializeField] private float maxHealth = 100f;
     [SerializeField] private DamageableAction damageableAction;
 
@@ -28,7 +23,7 @@ public class Damageable : MonoBehaviour
         _health -= damage;
         if (_health <= 0)
         {
-            EventSystem<OnDamageableDestroyed>.Invoke(new OnDamageableDestroyed { DamageableId = Id });
+            EventSystem<OnDamageableDestroyed>.Invoke(new OnDamageableDestroyed { DamageableDestroyed = gameObject });
             damageableAction?.OnDamageableDestroyed(this);
         }
         else
