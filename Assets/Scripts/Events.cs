@@ -21,3 +21,24 @@ public class OnMissionFailed : IEvent
     public MissionData Mission { get; set; }
     public string Reason { get; set; }
 }
+
+public class OnStepStarted : IEvent
+{
+    public MissionStep Step { get; set; }
+}
+
+public class OnStepFinished : IEvent
+{
+    public MissionStep Step { get; set; }
+}
+
+public class OnMissionBecameAvailable : IEvent
+{
+    public MissionData Mission { get; set; }
+}
+
+
+public class OnMissionStarting : IEvent
+{
+    public MissionData Mission { get; set; }
+}

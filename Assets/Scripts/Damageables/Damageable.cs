@@ -3,7 +3,7 @@
 public class Damageable : MonoBehaviour
 {
     [SerializeField] private float maxHealth = 100f;
-    [SerializeField] private DamageableAction damageableAction;
+    [SerializeField] private DamageableAction[] damageableActions;
 
     private float _health;
 
@@ -24,11 +24,11 @@ public class Damageable : MonoBehaviour
         if (_health <= 0)
         {
             EventSystem<OnDamageableDestroyed>.Invoke(new OnDamageableDestroyed { DamageableDestroyed = gameObject });
-            damageableAction?.OnDamageableDestroyed(this);
+            foreach (var damageableAction in damageableActions) damageableAction?.OnDamageableHealthReachedZero(this);
         }
         else
         {
-            damageableAction?.OnDamageableHit(this);
+            foreach (var damageableAction in damageableActions) damageableAction?.OnDamageableHit(this);
         }
     }
 
@@ -43,6 +43,6 @@ public class Damageable : MonoBehaviour
         _health += heal;
         _health = Mathf.Clamp(_health, 0, maxHealth);
 
-        damageableAction?.OnDamageableHealed(this);
+        foreach (var damageableAction in damageableActions) damageableAction?.OnDamageableHealed(this);
     }
 }

@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 
+[CreateAssetMenu(menuName = "Mission/Steps/Step Condition/Pickup Item", order = int.MaxValue)]
 public class PickupItemCondition : EventBasedStepCondition<OnItemPickedUp>
 {
     [SerializeField] private string itemTag;

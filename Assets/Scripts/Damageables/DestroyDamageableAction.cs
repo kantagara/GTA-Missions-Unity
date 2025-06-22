@@ -3,7 +3,7 @@
 [CreateAssetMenu(fileName = "Destroy Damageable", menuName = "Damageable/Destroy Damageable", order = 1)]
 public class DestroyDamageableAction :DamageableAction
 {
-    public override void OnDamageableDestroyed(Damageable damageable)
+    public override void OnDamageableHealthReachedZero(Damageable damageable)
     {
         Destroy(damageable.gameObject);
     }

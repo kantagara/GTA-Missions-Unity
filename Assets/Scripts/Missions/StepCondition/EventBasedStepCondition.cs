@@ -1,22 +1,23 @@
-﻿
-    public abstract class EventBasedStepCondition<T> : StepCondition where T:IEvent
+﻿using System;
+
+public abstract class EventBasedStepCondition<T> : StepCondition where T : IEvent
+{
+    public override void OnStart(Action stepCompleted, Action<string> stepFailed)
     {
-        public override void StartTracking(MissionStep missionStep, bool isFailStep = false)
-        {
-            base.StartTracking(missionStep, isFailStep);
-            EventSystem<T>.Subscribe(StepEventInvoked);
-        }
-
-        private void StepEventInvoked(T obj)
-        {
-            if(EventConditionSatisfied(obj))
-                InvokeStepCompleted();
-        }
-
-        public override void StopTracking(MissionStep missionStep)
-        {
-            EventSystem<T>.Unsubscribe(StepEventInvoked);
-        }
-
-        protected abstract bool EventConditionSatisfied(T obj);
+        base.OnStart(stepCompleted, stepFailed);
+        EventSystem<T>.Subscribe(StepEventInvoked);
     }
+
+    private void StepEventInvoked(T obj)
+    {
+        if (EventConditionSatisfied(obj))
+            InvokeAppropriateStepEvent();
+    }
+
+    public override void OnStop()
+    {
+        EventSystem<T>.Unsubscribe(StepEventInvoked);
+    }
+
+    protected abstract bool EventConditionSatisfied(T obj);
+}

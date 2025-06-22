@@ -1,33 +1,36 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
+using UnityEngine.Assertions;
 
+public abstract class StepCondition : ScriptableObject
+{
+    [SerializeField] private string failReasonText;
+    private bool isTracking;
+    private event Action<string> StepFailed;
+    private event Action StepCompleted;
 
-    public abstract class StepCondition : ScriptableObject
+    public virtual void OnStart(Action stepCompleted, Action<string> stepFailed)
     {
-        public string StepConditionText { get; private set; }
-        private bool _isFailStep;
-        private MissionStep missionStep;
-
-        public virtual void StartTracking(MissionStep step, bool isFailStep = false)
-        {
-            this.missionStep = step;
-            _isFailStep = isFailStep;
-        }
-
-        public void OnUpdate()
-        {
-            
-        }
-
-        protected void InvokeStepCompleted()
-        {
-            if(_isFailStep)
-                missionStep.OnStepFailed?.Invoke(StepConditionText);
-            else 
-                missionStep.OnStepCompleted?.Invoke();
-        }
-
-        public virtual void StopTracking(MissionStep missionStep)
-        {
-            
-        }
+        Assert.IsFalse(isTracking, "Already tracking this condition ");
+        isTracking = true;
+        StepCompleted = stepCompleted;
+        StepFailed = stepFailed;
     }
+
+    public virtual void OnUpdate()
+    {
+    }
+
+    protected void InvokeAppropriateStepEvent()
+    {
+        StepCompleted?.Invoke();
+        StepFailed?.Invoke(failReasonText);
+    }
+
+    public virtual void OnStop()
+    {
+        isTracking = false;
+        StepCompleted = null;
+        StepFailed = null;
+    }
+}

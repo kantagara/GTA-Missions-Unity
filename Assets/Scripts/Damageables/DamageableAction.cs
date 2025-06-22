@@ -2,7 +2,7 @@
 
 public abstract class DamageableAction : ScriptableObject
 {
-    public abstract void OnDamageableDestroyed(Damageable damageable);
+    public abstract void OnDamageableHealthReachedZero(Damageable damageable);
 
     public abstract void OnDamageableHit(Damageable damageable);
 

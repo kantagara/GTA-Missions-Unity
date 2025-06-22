@@ -1,6 +1,7 @@
+using System;
 using UnityEngine;
 
-public class PlayerMovement : MonoBehaviour
+public class PlayerMovement : Singleton<PlayerMovement>
 {
     private static readonly int MoveX = Animator.StringToHash("moveX");
     private static readonly int MoveZ = Animator.StringToHash("moveZ");
@@ -13,11 +14,30 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private LayerMask groundMask;
     [SerializeField] private Transform cameraTransform;
 
+    [field: SerializeField] public bool InputEnabled { get; set; } = true;
+    
     private Vector3 _velocity;
     private bool _isGrounded;
 
+    private void Start()
+    {
+        EventSystem<OnMissionStarting>.Subscribe(MissionStarting);
+    }
+
+    private void MissionStarting(OnMissionStarting obj)
+    {
+        animator.SetFloat(MoveX, 0);
+        animator.SetFloat(MoveZ, 0);
+    }
+
+    private void OnDestroy()
+    {
+        EventSystem<OnMissionStarting>.Unsubscribe(MissionStarting);
+    }
+
     private void Update()
     {
+        if(!InputEnabled) return;
         float inputX = Input.GetAxis("Horizontal");
         float inputZ = Input.GetAxis("Vertical");
 
