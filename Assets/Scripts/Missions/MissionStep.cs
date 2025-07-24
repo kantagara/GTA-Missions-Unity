@@ -5,7 +5,7 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "Mission Step", menuName = "Mission/Steps/Step")]
 public class MissionStep : ScriptableObject
 {
-    [field: SerializeField] public string StepText { get; private set; }
+    [field: SerializeField] public string StepText { get; set; }
 
     [SerializeField] private StepCondition[] successfulSteps;
     [SerializeField] private StepCondition[] failedSteps;
