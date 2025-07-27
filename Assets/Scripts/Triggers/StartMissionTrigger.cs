@@ -13,6 +13,15 @@ namespace Triggers
 
         public void Execute(GameObject go)
         {
+            if (missionData.MissionPrerequisite != null && !missionData.MissionPrerequisite.IsPrerequisiteSatisfied())
+            {
+                EventSystem<OnMissionPrerequisiteNotSatisfied>.Invoke(new OnMissionPrerequisiteNotSatisfied()
+                {
+                    Text = missionData.MissionPrerequisite.PrerequisiteFailText
+                });
+                return;
+            }
+            
             EventSystem<OnMissionStarting>.Invoke(new OnMissionStarting()
             {
                 Mission = missionData

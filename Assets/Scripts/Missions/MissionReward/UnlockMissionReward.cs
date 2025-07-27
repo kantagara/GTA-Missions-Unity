@@ -7,6 +7,6 @@
         public override string Display => null;
         public override void ClaimReward()
         {
-            missionData.IsAvailable = true;
+            missionData.CurrentStatus = MissionAvailabilityStatus.Available;
         }
     }

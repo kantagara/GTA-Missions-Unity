@@ -12,7 +12,7 @@ namespace Triggers
         protected override void Awake()
         {
             base.Awake();
-            EventSystem<OnMissionBecameAvailable>.Subscribe(MissionBecameAvailable);
+            EventSystem<OnMissionStatusChanged>.Subscribe(MissionBecameAvailable);
             EventSystem<OnMissionCompleted>.Subscribe(MissionCompleted);
             EventSystem<OnMissionStarting>.Subscribe(MissionStarting);
             EventSystem<OnMissionFailed>.Subscribe(MissionFailed);
@@ -20,7 +20,7 @@ namespace Triggers
 
         private void OnDestroy()
         {
-            EventSystem<OnMissionBecameAvailable>.Unsubscribe(MissionBecameAvailable);
+            EventSystem<OnMissionStatusChanged>.Unsubscribe(MissionBecameAvailable);
         }
 
         private void MissionStarting(OnMissionStarting obj)
@@ -45,7 +45,7 @@ namespace Triggers
             foreach (var trigger in triggers.Values) trigger.gameObject.SetActive(isOn);
         }
 
-        private void MissionBecameAvailable(OnMissionBecameAvailable obj)
+        private void MissionBecameAvailable(OnMissionStatusChanged obj)
         {
             var trigger = Instantiate(missionTrigger, obj.Mission.MissionPosition, Quaternion.identity);
             trigger.TriggerAction = new StartMissionTrigger(obj.Mission);

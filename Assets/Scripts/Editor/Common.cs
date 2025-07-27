@@ -18,7 +18,7 @@ public static class Common
             .ToList();
     }
     
-    private static string RegexReplacePascal(string input)
+    public static string RegexReplacePascal(this string input)
     {
         return string.Join(" ", Regex.Split(input, @"(?<!^)(?=[A-Z])"));
     }

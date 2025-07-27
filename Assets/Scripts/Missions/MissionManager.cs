@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
@@ -8,10 +7,10 @@ public class MissionManager : Singleton<MissionManager>
     private const string MissionsKey = "Missions";
 
     [SerializeField] private List<MissionData> missionData = new();
-    private Dictionary<string, MissionData> missionDataDict = new();
-    private MissionData currentMission;
     private HashSet<string> availableMissions = new();
-    
+    private MissionData currentMission;
+    private Dictionary<string, MissionData> missionDataDict = new();
+
 
     private void Start()
     {
@@ -19,10 +18,8 @@ public class MissionManager : Singleton<MissionManager>
 
         availableMissions = GetAvailableMissions();
         foreach (var missionId in availableMissions)
-        {
-            missionDataDict[missionId].IsAvailable = true;
-        }
-        EventSystem<OnMissionBecameAvailable>.Subscribe(MissionBecameAvailable);
+            missionDataDict[missionId].CurrentStatus = MissionAvailabilityStatus.Available;
+        EventSystem<OnMissionStatusChanged>.Subscribe(MissionStatusChanged);
         EventSystem<OnMissionStarting>.Subscribe(OnPlayerStartingMission);
         EventSystem<OnMissionCompleted>.Unsubscribe(MissionCompleted);
     }
@@ -35,13 +32,13 @@ public class MissionManager : Singleton<MissionManager>
     private void OnDestroy()
     {
         SetAvailableMissions();
-        EventSystem<OnMissionBecameAvailable>.Unsubscribe(MissionBecameAvailable);
+        EventSystem<OnMissionStatusChanged>.Unsubscribe(MissionStatusChanged);
         EventSystem<OnMissionStarting>.Unsubscribe(OnPlayerStartingMission);
         EventSystem<OnMissionCompleted>.Unsubscribe(MissionCompleted);
-        
+
         foreach (var mission in missionData)
         {
-            mission.IsAvailable = false;
+            mission.CurrentStatus = MissionAvailabilityStatus.Unavailable;
             mission.Cleanup();
         }
     }
@@ -49,7 +46,6 @@ public class MissionManager : Singleton<MissionManager>
     private void MissionCompleted(OnMissionCompleted obj)
     {
         availableMissions.Remove(obj.Mission.MissionId);
-        obj.Mission.IsAvailable = false;
     }
 
     private void OnPlayerStartingMission(OnMissionStarting obj)
@@ -58,9 +54,11 @@ public class MissionManager : Singleton<MissionManager>
         currentMission.StartMission();
     }
 
-    private void MissionBecameAvailable(OnMissionBecameAvailable obj)
+    private void MissionStatusChanged(OnMissionStatusChanged obj)
     {
-        availableMissions.Add(obj.Mission.MissionId);
+        if (obj.PreviousStatus == MissionAvailabilityStatus.Unavailable &&
+            obj.Mission.CurrentStatus == MissionAvailabilityStatus.Available)
+            availableMissions.Add(obj.Mission.MissionId);
     }
 
     private void SetAvailableMissions()

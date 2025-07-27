@@ -1,37 +1,40 @@
 ﻿using System;
 using System.Collections.Generic;
+using Missions;
 using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
 [CustomEditor(typeof(MissionStep))]
-[CanEditMultipleObjects] // omogucava multi-edit ako zatreba
+[CanEditMultipleObjects]
 public class MissionStepEditor : Editor
 {
+    private readonly Dictionary<Object, Editor> editorCache = new();
     private bool drawDefault;
-
-    private SerializedProperty stepText;
-    private SerializedProperty successfulSteps;
-    private SerializedProperty failStep;
-    private SerializedProperty stepStarted;
-    private SerializedProperty stepCompleted;
     private int? indexToRemove;
 
-    private Dictionary<Object, Editor> dict = new ();
-    
+    private MissionStepProperties properties;
+    private StepListConfig[] listConfigs;
+
     private void OnEnable()
     {
-        stepText = serializedObject.FindProperty("<StepText>k__BackingField");
-        successfulSteps = serializedObject.FindProperty("successfulSteps");
-        failStep = serializedObject.FindProperty("failedSteps");
-        stepStarted = serializedObject.FindProperty("stepStarted");
-        stepCompleted = serializedObject.FindProperty("stepFinished");
+        properties = new MissionStepProperties(serializedObject);
+        listConfigs = new[]
+        {
+            new StepListConfig("Successful Steps", "Successful Step",
+                properties.SuccessfulSteps, Common.GetDerivedTypes<StepCondition>),
+            new StepListConfig("Failed Steps", "Failed Step",
+                properties.FailStep, Common.GetDerivedTypes<StepCondition>),
+            new StepListConfig("Step started", "Step started",
+                properties.StepStarted, Common.GetDerivedTypes<StepLifecycleEvent>),
+            new StepListConfig("Step finished", "Step finished",
+                properties.StepCompleted, Common.GetDerivedTypes<StepLifecycleEvent>)
+        };
     }
 
     public override void OnInspectorGUI()
     {
-        drawDefault = EditorGUILayout.Toggle("Draw Default Inspector", drawDefault);
-        EditorGUILayout.Space();
+        DrawInspectorToggle();
 
         if (drawDefault)
         {
@@ -40,75 +43,143 @@ public class MissionStepEditor : Editor
         }
 
         serializedObject.Update();
-
-        DrawStepText();
-        DrawSuccessfulSteps();
-        DrawFailedSteps();
-        DrawStepStarted();
-        DrawStepFinished();
-
+        DrawCustomInspector();
         serializedObject.ApplyModifiedProperties();
+    }
+
+    private void DrawInspectorToggle()
+    {
+        drawDefault = EditorGUILayout.Toggle("Draw Default Inspector", drawDefault);
+        EditorGUILayout.Space();
+    }
+
+    private void DrawCustomInspector()
+    {
+        DrawStepText();
+        DrawStepLists();
     }
 
     private void DrawStepText()
     {
-        EditorGUI.BeginChangeCheck(); 
-        EditorGUILayout.PropertyField(stepText);
-        if (!EditorGUI.EndChangeCheck()) return;
-        
+        EditorGUI.BeginChangeCheck();
+        EditorGUILayout.PropertyField(properties.StepText);
+
+        if (EditorGUI.EndChangeCheck()) UpdateStepName();
+    }
+
+    private void UpdateStepName()
+    {
         var step = (target as MissionStep)!;
         step.name = step.StepText;
         EditorUtility.SetDirty(step);
     }
 
-
-    private void DrawSuccessfulSteps()
+    private void DrawStepLists()
     {
-        DrawList("Successful Steps", "Successful Step", successfulSteps, () =>
+        foreach (var config in listConfigs)
         {
-            Common.ShowScriptableObjectDropdown("New Successful Step", Common.GetDerivedTypes<StepCondition>(), (type) =>
-            {
-                var condition = CreateInstance(type) as StepCondition;
-                var element = successfulSteps.AddElementAndCreateEditor(condition);
-                serializedObject.ApplyModifiedProperties();
-                dict.Add(element.Item1.objectReferenceValue, element.Item2);
-            });
-        });
+            DrawStepList(config);
+        }
     }
 
-    private void DrawList(string title, string elementName, SerializedProperty property, Action onAddClicked)
+    private void DrawStepList(StepListConfig config)
     {
-        EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
+        config.FoldOut = EditorGUILayout.Foldout(config.FoldOut, config.Title);
+        if (!config.FoldOut)
+            return;
         EditorGUI.indentLevel++;
 
-        for (int i = 0; i < property.arraySize; i++)
-        {
-            EditorGUILayout.BeginHorizontal(EditorStyles.helpBox); 
-      
-            if (GUILayout.Button("X", GUILayout.Width(20)))
-                indexToRemove = i;
-            
-            SerializedProperty element = property.GetArrayElementAtIndex(i);
-            EditorGUILayout.EndHorizontal();
-            dict[element.objectReferenceValue].OnInspectorGUI();
-
-        }
-
-        EditorGUILayout.Space(4);
-        if (GUILayout.Button($"Add {elementName}")) 
-            onAddClicked?.Invoke();
-
-        if (indexToRemove != null)
-            property.DeleteArrayElementAtIndex(indexToRemove.Value);
-        indexToRemove = null;
+        DrawListElements(config.Property);
+        GUILayout.Space(20);
+        DrawAddButton(config);
+        HandleElementRemoval(config.Property);
 
         EditorGUI.indentLevel--;
     }
 
+    private void DrawListElements(SerializedProperty property)
+    {
+        for (var i = 0; i < property.arraySize; i++)
+        {
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            EditorGUILayout.BeginHorizontal();
 
-    private void DrawFailedSteps() { }
+            if (GUILayout.Button("X", GUILayout.Width(20)))
+                indexToRemove = i;
+            
+            var element = property.GetArrayElementAtIndex(i);
+            EditorGUILayout.LabelField(element.objectReferenceValue.GetType().Name.RegexReplacePascal(), EditorStyles.boldLabel);
+            EditorGUILayout.EndHorizontal();
 
-    private void DrawStepStarted() { }
+            if (editorCache.TryGetValue(element.objectReferenceValue, out var editor)) editor.OnInspectorGUI();
+            
+            EditorGUILayout.EndVertical();
 
-    private void DrawStepFinished() { }
+        }
+    }
+
+    private void DrawAddButton(StepListConfig config)
+    {
+        EditorGUILayout.Space(4);
+        if (GUILayout.Button($"Add {config.ElementName}")) ShowDropdownForType(config);
+    }
+
+    private void ShowDropdownForType(StepListConfig config)
+    {
+        Common.ShowScriptableObjectDropdown($"New {config.ElementName}",
+            config.GetTypes(), type =>
+            {
+                var instance = CreateInstance(type);
+                var element = config.Property.AddElementAndCreateEditor(instance);
+                serializedObject.ApplyModifiedProperties();
+                editorCache.Add(element.Item1.objectReferenceValue, element.Item2);
+            });
+    }
+
+    private void HandleElementRemoval(SerializedProperty property)
+    {
+        if (indexToRemove != null)
+        {
+            property.DeleteArrayElementAtIndex(indexToRemove.Value);
+            indexToRemove = null;
+        }
+    }
+}
+
+// Extracted property wrapper
+public class MissionStepProperties
+{
+    public MissionStepProperties(SerializedObject serializedObject)
+    {
+        StepText = serializedObject.FindProperty("<StepText>k__BackingField");
+        SuccessfulSteps = serializedObject.FindProperty("successfulSteps");
+        FailStep = serializedObject.FindProperty("failedSteps");
+        StepStarted = serializedObject.FindProperty("stepStarted");
+        StepCompleted = serializedObject.FindProperty("stepFinished");
+    }
+
+    public SerializedProperty StepText { get; }
+    public SerializedProperty SuccessfulSteps { get; }
+    public SerializedProperty FailStep { get; }
+    public SerializedProperty StepStarted { get; }
+    public SerializedProperty StepCompleted { get; }
+}
+
+public class StepListConfig
+{
+    public StepListConfig(string title, string elementName,
+        SerializedProperty property, Func<List<(Type, string)>> getTypes)
+    {
+        Title = title;
+        ElementName = elementName;
+        Property = property;
+        GetTypes = getTypes;
+    }
+
+    public string Title { get; }
+    public string ElementName { get; }
+    public SerializedProperty Property { get; }
+    public Func<List<(Type, string)>> GetTypes { get; }
+    
+    public bool FoldOut { get; set; }
 }

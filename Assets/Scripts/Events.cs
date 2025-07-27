@@ -32,13 +32,19 @@ public class OnStepFinished : IEvent
     public MissionStep Step { get; set; }
 }
 
-public class OnMissionBecameAvailable : IEvent
+public class OnMissionStatusChanged : IEvent
 {
     public MissionData Mission { get; set; }
+    public MissionAvailabilityStatus PreviousStatus { get; set; }
 }
 
 
 public class OnMissionStarting : IEvent
 {
     public MissionData Mission { get; set; }
+}
+
+public class OnMissionPrerequisiteNotSatisfied : IEvent
+{
+    public string Text { get; set; }
 }
